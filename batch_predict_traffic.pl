@@ -23,13 +23,14 @@ my @files = (
 # my @files = ("tcpdump.home.static.tcp.dat.throughput.1.txt");
 
 my @methods = ("EWMA", "HW");
-my @targets = ("THROUGHPUT", "VARIANCE", "WIN_MEAN", "WIN_VARIANCE");
+my @targets = ("THROUGHPUT", "VARIANCE");
 my @ewma_alpha = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1);
 my @hw_alpha = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1);
 my @hw_beta = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1);
 my @hw_gamma = (0.1);
 
 
+open FH, "> batch_predict_traffic.output" or die $!;
 foreach my $file (@files) {
     # print "\n$file:\n";
 
@@ -100,8 +101,9 @@ foreach my $file (@files) {
                 $error += 0; $throughput += 0;
                 # print "----> best\t$best_alpha $best_beta $best_gamma $error\n";
                 my ($env, $interval, $trace) = parse_name_for_parameters($file);
-                print "$interval seconds\t$env\t$method\t$target\t";
-                print "$error\t$throughput\t$best_alpha,$best_beta\n";
+                print "$interval seconds\t$env\t$method\t$target\t$error\t$throughput\t$best_alpha,$best_beta\n";
+                print FH "$interval seconds\t$env\t$method\t$target\t$error\t$throughput\t$best_alpha,$best_beta\n";
+
             }
         }
 
@@ -157,3 +159,4 @@ sub parse_name_for_parameters {
 
     return ($env, $interval, $trace);
 }
+close FH;

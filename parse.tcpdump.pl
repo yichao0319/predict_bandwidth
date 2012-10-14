@@ -5,9 +5,12 @@
 ## input:
 ##   input_filename: raw tcpdump data
 ##   interval: in second
+##   server ip
+##   server port
 ##
 ## output:
 ##   input_filename.throughput.interval.txt
+##     <time interval> <received data in bytes> <throughput mean> <throughput variance>
 
 
 #!/bin/perl
@@ -20,8 +23,8 @@ my $DEBUG = 1;
 
 #####
 ## global variables
-# my $raw_dir = "./RAWDATA";
-my $raw_dir = "/var/local/yichao/mobile_streaming/RAWDATA";
+my $raw_dir = "./RAWDATA";
+# my $raw_dir = "/var/local/yichao/mobile_streaming/RAWDATA";
 my $output_dir = "./PARSEDDATA";
 my $file;
 my $output_file;
@@ -36,6 +39,7 @@ my $small_interval = 0.2;   ## to calculate mean and var throughput in $interval
 my $small_interval_start = -1;
 my $small_interval_sum = 0;
 my @small_interval_throughput = ();
+
 
 #####
 ## inputs
@@ -170,15 +174,15 @@ sub stdev{
     my($data) = @_;
     
     if(@$data <= 1){
-            return 0;
+        return 0;
     }
     
     my $average = &mean($data);
     my $sqtotal = 0;
     foreach(@$data) {
-            $sqtotal += ($average-$_) ** 2;
+        $sqtotal += ($average-$_) ** 2;
     }
-    my $std = ($sqtotal / (@$data-1)) ** 0.5;
+    my $std = ($sqtotal / (@$data - 1)) ** 0.5;
     return $std;
 }
 
@@ -186,15 +190,15 @@ sub variance{
     my($data) = @_;
     
     if(@$data <= 1){
-            return 0;
+        return 0;
     }
     
     my $average = &mean($data);
     my $sqtotal = 0;
     foreach(@$data) {
-            $sqtotal += ($average-$_) ** 2;
+        $sqtotal += (($average-$_) ** 2);
     }
-    my $std = ($sqtotal / (@$data));
+    my $std = $sqtotal / (@$data - 1);
     return $std;
 }
 

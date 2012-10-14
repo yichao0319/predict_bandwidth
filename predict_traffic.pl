@@ -1,6 +1,27 @@
 #####################################
 ## Yi-Chao Chen
-## perl predict_traffic.pl shuttle_throughput_5.txt EWMA 0.1
+## perl predict_traffic.pl tcpdump.campus.walking.tcp.dat.throughput.1.txt THROUGHPUT EWMA 0.1
+##
+## input:
+##   input_filename: take the output file from parse.tcpdump.pl as input
+##      <time interval> <received data in bytes> <throughput mean> <throughput variance>
+##   target: the target to predict
+##      [THROUGHPUT | VARIANCE]
+##   prediction method:
+##      [EWMA | HW | ALL]
+##   parameters: parameters for prediction method
+##
+## output:
+##   input_filename.TARGET.raw.txt
+##     <time interval> <actual value>
+##     if TARGET is VARIANCE, then <actual valude> is the variance of the interval
+##   input_filename.TARGET.METHOD.txt
+##     <time interval> <predicted value> <TCPVAR-like deviation> <s_ewma> 
+##   input_filename.TARGET.METHOD.err.txt
+##     <time interval> <prediction error> 
+##
+
+
 
 #!/bin/perl
 
@@ -15,9 +36,6 @@ my $METHOD_HW = "HW";
 my $METHOD_ALL = "ALL";
 my $PREDICT_THROUGHPUT = "THROUGHPUT";
 my $PREDICT_THROUGHPUT_VARIANCE = "VARIANCE";
-my $PREDICT_THROUGHPUT_WIN_MEAN = "WIN_MEAN";
-my $PREDICT_THROUGHPUT_WIN_VARIANCE = "WIN_VARIANCE";
-my $WIN_SIZE = 60;
 
 
 #####
@@ -26,21 +44,15 @@ my $WIN_SIZE = 60;
 my $file_path = "./PARSEDDATA";
 my $file;
 my $output_dir = "./PARSEDDATA";
-my $method;
-my $target;
+my $method; ## prediction method: EWMA, HW, ..
+my $target; ## prediction target: mean throughput, variance throughput, ...
 my $interval = -1;
-my $win_for_var;
-my @win_throughput = ();
-my $target_sum = 0;
+my $target_sum = 0; ## used to calculate average target value in the end
 my $target_ind = 0;
 
-
-## raw throughput
+## raw
 my @time;
-my @raw;
-my $pre_time = 0;
-my $throughput_sum = 0;
-my $total_time;
+my @raw;    ## time series for raw data
 
 ## EWMA
 my @ewma;
@@ -104,27 +116,12 @@ while(<FH>) {
     ##   format: <time> <received bytes in this interval> <mean throughput of the interval> <variance throughput of the interval>
     my ($time, $rev_data, $throughput_mean, $throughput_variance) = split(/[ \n]/, $_);
     print join(", ", ($time, $rev_data, $throughput_mean, $throughput_variance))."\n" if($DEBUG0); 
-    if($interval == -1) {
-        $interval = $time;
-        $win_for_var = $WIN_SIZE / $interval;
-    }
-    
+    $interval = $time if($interval == -1);
     
     ## calculate throughput of the interval
     my $cur_throughput = $rev_data * 8.0 / $interval / 1000;
-    $throughput_sum += $rev_data;
-    $total_time = $time;
-
-    ## calculate throughput of the window, variance throughput of the window
-    while(@win_throughput >= $win_for_var) {
-        shift(@win_throughput);
-    }
-    push(@win_throughput, $cur_throughput);
-    my $cur_win_mean  = mean(\@win_throughput);
-    my $cur_win_variance = variance(\@win_throughput);
     
-
-
+    
     #####
     ## determine the prediction target
     my $target_value;
@@ -133,12 +130,6 @@ while(<FH>) {
     }
     elsif($target eq $PREDICT_THROUGHPUT_VARIANCE) {
         $target_value = $throughput_variance;
-    }
-    elsif($target eq $PREDICT_THROUGHPUT_WIN_MEAN) {
-        $target_value = $cur_win_mean;
-    }
-    elsif($target eq $PREDICT_THROUGHPUT_WIN_VARIANCE) {
-        $target_value = $cur_win_variance;
     }
     else {
         die "wrong target name\n";
@@ -159,13 +150,12 @@ while(<FH>) {
             push(@ewma, 0);                 ## predict the first one as 0
             push(@ewma_dev, 0);
             push(@ewma_dev2, 0);
-            $ewma_pred = $target_value;   ## predict the second one as the first measurement
+            $ewma_pred = $target_value;   ## the second prediction is just the first measurement
             $ewma_dev_pred = $target_value / 2;
         }
         else {
             $ewma_dev_pred = $ewma_alpha * abs($target_value - $ewma_pred) + (1 - $ewma_alpha) * $ewma_dev_pred;
             $ewma_pred = $ewma_alpha * $target_value + (1 - $ewma_alpha) * $ewma_pred;
-
         }
         push(@ewma, $ewma_pred);
         push(@ewma_dev, $ewma_dev_pred);
@@ -188,6 +178,7 @@ while(<FH>) {
         my $b_t = $hw_beta * ($a_t - $a_t_1) + (1 - $hw_beta) * $b_t_1;
         my $tmp_pred = $a_t + $b_t;
         if($hw_pred == $MINUS_INFINITY) {
+            ## first prediction: deviation is half of it
             $hw_dev_pred = $tmp_pred / 2;
         }
         else {
@@ -208,24 +199,53 @@ close FH;
 
 #####
 ## post process
-my $total_throughput = $throughput_sum * 8 / $total_time / 1000;
-print $throughput_sum.", ". $total_time."\n" if($DEBUG0);
-##  i) print prediction error
+##  i) output time series
+## raw
+open FH_RAW, "> $output_dir/$file.$target.raw.txt" or die $!;
+for(my $i = 0; $i < scalar(@raw); $i ++) {
+    print FH_RAW $time[$i]." ".$raw[$i]."\n";
+}
+close FH_RAW;
+
 ## EWMA
 if($method eq $METHOD_EWMA || $method eq $METHOD_ALL) {
     pop(@ewma); ## remove the last prediction
     die "wrong number of ewma prediction" if($#ewma != $#raw);
     print "length of array: ".scalar(@raw)."\n" if($DEBUG0);
 
+    open FH_EWMA, "> $output_dir/$file.$target.ewma.txt" or die $!;
+    for(my $i = 0; $i < scalar(@ewma); $i ++) {
+        print FH_EWMA $time[$i]." ".$ewma[$i]." ".$ewma_dev[$i]." ".$ewma_dev2[$i]."\n";
+    }
+    close FH_EWMA;
+}
+
+## Holt-Winters: no seasonal trend
+if($method eq $METHOD_HW || $method eq $METHOD_ALL) {
+    pop(@hw); ## remove the last prediction
+    die "wrong number of Holt-Winters prediction" if($#hw != $#raw);
+    print "length of array: ".scalar(@raw)."\n" if($DEBUG0);
+    
+    open FH_HW, "> $output_dir/$file.$target.hw.txt" or die $!;
+    for(my $i = 0; $i < scalar(@hw); $i ++) {
+        print FH_HW $time[$i]." ".$hw[$i]." ".$hw_dev[$i]." ".$hw_dev2[$i]."\n";
+    }
+    close FH_HW;
+}
+
+##  ii) print prediction error
+## EWMA
+if($method eq $METHOD_EWMA || $method eq $METHOD_ALL) {
     open FH_EWMA, "> $output_dir/$file.$target.ewma.err.txt" or die $!;
     print FH_EWMA $time[0]." 0\n";
     my $sum = 0.0;
+    ## ignore the first prediction
     for(my $i = 1; $i < scalar(@raw); $i ++) {
         my $error = abs($raw[$i] - $ewma[$i]);
         $sum += $error;
         print FH_EWMA $time[$i]." $error\n";
     }
-    my $ewma_avg_err = $sum / (scalar(@raw) - 1);
+    my $ewma_avg_err = $sum / (scalar(@raw) - 1);   
     close FH_EWMA;
     
     print "EWMA avg err = " if($DEBUG0);
@@ -235,10 +255,6 @@ if($method eq $METHOD_EWMA || $method eq $METHOD_ALL) {
 
 ## Holt-Winters: no seasonal trend
 if($method eq $METHOD_HW || $method eq $METHOD_ALL) {
-    pop(@hw); ## remove the last prediction
-    die "wrong number of Holt-Winters prediction" if($#hw != $#raw);
-    print "length of array: ".scalar(@raw)."\n" if($DEBUG0);
-    
     open FH_HW, "> $output_dir/$file.$target.hw.err.txt" or die $!;
     print FH_HW $time[0]." 0\n";
     my $sum = 0.0;
@@ -256,33 +272,6 @@ if($method eq $METHOD_HW || $method eq $METHOD_ALL) {
 }
 
 
-#####
-## post process
-##  ii) output time series
-## raw
-open FH_RAW, "> $output_dir/$file.$target.raw.txt" or die $!;
-for(my $i = 0; $i < scalar(@raw); $i ++) {
-    print FH_RAW $time[$i]." ".$raw[$i]."\n";
-}
-close FH_RAW;
-
-## EWMA
-if($method eq $METHOD_EWMA || $method eq $METHOD_ALL) {
-    open FH_EWMA, "> $output_dir/$file.$target.ewma.txt" or die $!;
-    for(my $i = 0; $i < scalar(@ewma); $i ++) {
-        print FH_EWMA $time[$i]." ".$ewma[$i]." ".$ewma_dev[$i]." ".$ewma_dev2[$i]."\n";
-    }
-    close FH_EWMA;
-}
-
-## Holt-Winters: no seasonal trend
-if($method eq $METHOD_HW || $method eq $METHOD_ALL) {
-    open FH_HW, "> $output_dir/$file.$target.hw.txt" or die $!;
-    for(my $i = 0; $i < scalar(@hw); $i ++) {
-        print FH_HW $time[$i]." ".$hw[$i]." ".$hw_dev[$i]." ".$hw_dev2[$i]."\n";
-    }
-    close FH_HW;
-}
 
 
 
@@ -308,32 +297,31 @@ sub stdev{
     my($data) = @_;
     
     if(@$data <= 1){
-            return 0;
+        return 0;
     }
     
     my $average = &mean($data);
     my $sqtotal = 0;
     foreach(@$data) {
-            $sqtotal += ($average-$_) ** 2;
+        $sqtotal += ($average-$_) ** 2;
     }
-    my $std = ($sqtotal / (@$data-1)) ** 0.5;
+    my $std = ($sqtotal / (@$data - 1)) ** 0.5;
     return $std;
 }
-
 
 sub variance{
     my($data) = @_;
     
     if(@$data <= 1){
-            return 0;
+        return 0;
     }
     
     my $average = &mean($data);
     my $sqtotal = 0;
     foreach(@$data) {
-            $sqtotal += ($average-$_) ** 2;
+        $sqtotal += (($average-$_) ** 2);
     }
-    my $std = ($sqtotal / (@$data-1));
+    my $std = $sqtotal / (@$data - 1);
     return $std;
 }
 

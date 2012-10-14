@@ -27,12 +27,49 @@ that we may use later.
 
 ##########
 ## 1. parser
+parse.tcpdump.pl
+
+input:
+  input_filename: raw tcpdump data
+  interval: in second
+  server ip
+  server port
+
+output:
+  input_filename.throughput.interval.txt
+    <time interval> <received data in bytes> <throughput mean> <throughput variance>
+
+e.g.
+perl parse.tcpdump.pl tcpdump.home.static.tcp.dat 5 128.83.120.56 22
+
+or use batch script
+perl batch_parse.tcpdump.pl
 
 
 ##########
 ## 2. predictor
-(may need to change raw data directory)
-perl predict_traffic.pl shuttle_throughput_5.txt EWMA 0.1
-(or run batch script)
-perl batch_predict_traffic.pl
+predict_traffic.pl
 
+input:
+  input_filename: take the output file from parse.tcpdump.pl as input
+     <time interval> <received data in bytes> <throughput mean> <throughput variance>
+  target: the target to predict
+     [THROUGHPUT | VARIANCE]
+  prediction method:
+     [EWMA | HW | ALL]
+  parameters: parameters for prediction method
+
+output:
+  input_filename.TARGET.raw.txt
+    <time interval> <actual value>
+    if TARGET is VARIANCE, then <actual valude> is the variance of the interval
+  input_filename.TARGET.METHOD.txt
+    <time interval> <predicted value> <TCPVAR-like deviation> <s_ewma> 
+  input_filename.TARGET.METHOD.err.txt
+    <time interval> <prediction error> 
+
+e.g.
+perl predict_traffic.pl tcpdump.campus.walking.tcp.dat.throughput.1.txt THROUGHPUT EWMA 0.1
+
+or use batch script
+perl batch_predict_traffic.pl
