@@ -1,0 +1,38 @@
+##########
+## 
+The program includes two parts:
+1. parser:    parse tcpdump and generate throughput timeseries
+2. predictor: use EWMA/Holt-Winters to predict traffic
+
+
+
+##########
+## tcpdump
+tcpdump -i en3 -w tcpdump.campus.walking.tcp.dat tcp
+
+
+##########
+## Wei's trace
+The traces are at /v/filer4b/v27q002/ut-wireless/wdong/mobile_trace
+
+The raw traces are walking.pcap, shuttle.pcap and static.pcap
+
+The throughput per 5 seconds files are walking_throughput_5.txt,
+shuttle_throughput_5.txt and static_throughput_5.txt,  the numbers are
+in bytes.
+
+shuttle.txt, static.txt and walking.txt have all the sensor readings
+that we may use later.
+
+
+##########
+## 1. parser
+
+
+##########
+## 2. predictor
+(may need to change raw data directory)
+perl predict_traffic.pl shuttle_throughput_5.txt EWMA 0.1
+(or run batch script)
+perl batch_predict_traffic.pl
+
