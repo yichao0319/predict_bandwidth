@@ -9,8 +9,8 @@ set key Left above reverse horizontal nobox spacing 1
 filename = XXX
 target = XXX
 srcfile = "./PARSEDDATA/".filename.".".target.".raw.txt"
-ewmafile = "./PARSEDDATA/".filename.".".target.".ewma.txt"
-hwfile = "./PARSEDDATA/".filename.".".target.".hw.txt"
+ewmafile = "./PARSEDDATA/".filename.".".target.".EWMA.txt"
+hwfile = "./PARSEDDATA/".filename.".".target.".HW.txt"
 
 set output "figures/".filename.".".target.".ps"
 
@@ -35,8 +35,8 @@ hwfile using 1:2 with lines t "Holt-Winters" ls 3
 #####################################################
 
 set ylabel target;
-ewmafile = "./PARSEDDATA/".filename.".".target.".ewma.err.txt"
-hwfile = "./PARSEDDATA/".filename.".".target.".hw.err.txt"
+ewmafile = "./PARSEDDATA/".filename.".".target.".EWMA.err.txt"
+hwfile = "./PARSEDDATA/".filename.".".target.".HW.err.txt"
 
 set output "./figures/".filename.".".target.".err.ps"
 

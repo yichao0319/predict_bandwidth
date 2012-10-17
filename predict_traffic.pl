@@ -30,10 +30,13 @@ use strict;
 
 my $DEBUG0 = 0;
 my $DEBUG = 1;
+
 my $MINUS_INFINITY = -99999;
+
 my $METHOD_EWMA = "EWMA";
 my $METHOD_HW = "HW";
 my $METHOD_ALL = "ALL";
+
 my $PREDICT_THROUGHPUT = "THROUGHPUT";
 my $PREDICT_THROUGHPUT_VARIANCE = "VARIANCE";
 
@@ -88,18 +91,21 @@ if($method eq $METHOD_EWMA) {
     print "use EWMA\n" if($DEBUG0);
     $ewma_alpha = $ARGV[3];    
 }
-if($method eq $METHOD_HW) {
+elsif($method eq $METHOD_HW) {
     print "use Holt-Winters\n" if($DEBUG0);
     $hw_alpha = $ARGV[3];
     $hw_beta = $ARGV[4];
     $hw_gamma = $ARGV[5];
 }
-if($method eq $METHOD_ALL) {
+elsif($method eq $METHOD_ALL) {
     print "use all methods\n" if($DEBUG0);
     $ewma_alpha = $ARGV[3]; 
     $hw_alpha = $ARGV[4];
     $hw_beta = $ARGV[5];
     $hw_gamma = $ARGV[6];
+}
+else {
+    die "wrong method\n";
 }
 
 
@@ -119,7 +125,8 @@ while(<FH>) {
     $interval = $time if($interval == -1);
     
     ## calculate throughput of the interval
-    my $cur_throughput = $rev_data * 8.0 / $interval / 1000;
+    # my $cur_throughput = $rev_data * 8.0 / $interval / 1000;
+    my $cur_throughput = cal_throughput($rev_data, $interval);
     
     
     #####
@@ -213,7 +220,7 @@ if($method eq $METHOD_EWMA || $method eq $METHOD_ALL) {
     die "wrong number of ewma prediction" if($#ewma != $#raw);
     print "length of array: ".scalar(@raw)."\n" if($DEBUG0);
 
-    open FH_EWMA, "> $output_dir/$file.$target.ewma.txt" or die $!;
+    open FH_EWMA, "> $output_dir/$file.$target.EWMA.txt" or die $!;
     for(my $i = 0; $i < scalar(@ewma); $i ++) {
         print FH_EWMA $time[$i]." ".$ewma[$i]." ".$ewma_dev[$i]." ".$ewma_dev2[$i]."\n";
     }
@@ -226,7 +233,7 @@ if($method eq $METHOD_HW || $method eq $METHOD_ALL) {
     die "wrong number of Holt-Winters prediction" if($#hw != $#raw);
     print "length of array: ".scalar(@raw)."\n" if($DEBUG0);
     
-    open FH_HW, "> $output_dir/$file.$target.hw.txt" or die $!;
+    open FH_HW, "> $output_dir/$file.$target.HW.txt" or die $!;
     for(my $i = 0; $i < scalar(@hw); $i ++) {
         print FH_HW $time[$i]." ".$hw[$i]." ".$hw_dev[$i]." ".$hw_dev2[$i]."\n";
     }
@@ -236,7 +243,7 @@ if($method eq $METHOD_HW || $method eq $METHOD_ALL) {
 ##  ii) print prediction error
 ## EWMA
 if($method eq $METHOD_EWMA || $method eq $METHOD_ALL) {
-    open FH_EWMA, "> $output_dir/$file.$target.ewma.err.txt" or die $!;
+    open FH_EWMA, "> $output_dir/$file.$target.EWMA.err.txt" or die $!;
     print FH_EWMA $time[0]." 0\n";
     my $sum = 0.0;
     ## ignore the first prediction
@@ -255,7 +262,7 @@ if($method eq $METHOD_EWMA || $method eq $METHOD_ALL) {
 
 ## Holt-Winters: no seasonal trend
 if($method eq $METHOD_HW || $method eq $METHOD_ALL) {
-    open FH_HW, "> $output_dir/$file.$target.hw.err.txt" or die $!;
+    open FH_HW, "> $output_dir/$file.$target.HW.err.txt" or die $!;
     print FH_HW $time[0]." 0\n";
     my $sum = 0.0;
     for(my $i = 1; $i < scalar(@raw); $i ++) {
@@ -270,9 +277,6 @@ if($method eq $METHOD_HW || $method eq $METHOD_ALL) {
     # print "$hw_avg_err\t$total_throughput\n";
     print "$hw_avg_err\t".($target_sum/$target_ind)."\n";
 }
-
-
-
 
 
 
@@ -325,5 +329,11 @@ sub variance{
     return $std;
 }
 
+sub cal_throughput {
+    my ($rcv, $len) = @_;
+
+    # return $rcv * 8 / $len / 1000;
+    return $rcv / $len;
+}
 
 

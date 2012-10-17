@@ -1,9 +1,11 @@
 ##########
 ## 
-The program includes two parts:
+The program includes the following parts:
 1. parser:    parse tcpdump and generate throughput timeseries
 2. predictor: use EWMA/Holt-Winters to predict traffic
-
+3. output:    generate the output with format specified by Yousuk
+4. sensor parser: parse the sensor data from "xSensor"
+5. advance predictor: try to use sensor data to predict performance
 
 
 ##########
@@ -73,3 +75,70 @@ perl predict_traffic.pl tcpdump.campus.walking.tcp.dat.throughput.1.txt THROUGHP
 
 or use batch script
 perl batch_predict_traffic.pl
+
+
+##########
+## 3. output required by Yousuk
+generate_output.pl
+
+A) actual rate file
+0 RATE  62678.6666666667  3473081283.80952
+3000  RATE  261390.666666667  15496714106.6667
+....
+
+# 1st column : time offset that begins with zero, in msec.
+# 2nd column : fixed as "RATE"
+# 3rd column : throughput in bytes per second.
+# 4th column : actual variance of the interval
+
+B) estimation file
+0 0 0
+3000  62678.6666666667  3473081283.80952
+...
+
+# 1st column : same as above
+# 2nd column : estimated network rate in bytes per second.
+# 3rd column : estimated network variance.
+
+
+The files are available:
+/v/filer4b/v27q002/ut-wireless/yichao/mobile_streaming/traffic_prediction/PARSEDDATA/
+
+File names are
+tcpdump.XXX.tcp.dat.throughput.3.txt.actual.out
+tcpdump.XXX.tcp.dat.throughput.3.txt.predicted.YYY.out
+
+where:
+  XXX: scenarios (static, walking, shuttle, ...) as described my previous email
+  YYY: either use EWMA or HW for prediction
+
+
+time window size: 3 sec.
+
+
+
+##########
+## 4. sensor parser: parse the sensor data from "xSensor"
+parse.sensor.pl
+
+input:
+  input_filename: sensor data
+  interval: in second
+
+output:
+  input_filename.sensor.interval.txt
+    <time> <xMag mean> <xMag var> <yMag mean> <yMag var> <zMag mean> <zMag var> <xAccel mean> <xAccel var> <yAccel mean> <yAccel var> <zAccel mean> <zAccel var> <lat mean> <lat var> <lng mean> <lng var> <alt mean> <alt var> <xRate mean> <xRate var> <yRate mean> <yRate var> <zRate mean> <zRate var> <roll mean> <roll var> <pitch mean> <pitch var> <yaw mean> <yaw var>
+
+e.g.
+perl parse.sensor.pl sensor.driving.midnight1.dat 3
+
+or use batch script
+perl batch_parse.sensor.pl
+
+
+##########
+## 5. predict with the help of sensor data
+corr_sensor_performance.m
+
+
+

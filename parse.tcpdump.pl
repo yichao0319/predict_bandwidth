@@ -83,7 +83,8 @@ while(<FH>) {
         print join(", ", ($hour, $min, $sec, $time, $src_ip, $src_port, $dst_ip, $dst_port, $pkt_len) )."\n" if ($DEBUG0);
     }
     else {
-        die $_;
+        # die $_;
+        next;
     }
 
 
@@ -91,7 +92,11 @@ while(<FH>) {
     ## calculate throuphput per interval
     $interval_start = int($time) if($interval_start == -1);
     $small_interval_start = int($time) if($small_interval_start == -1);
-    die "current time is prior to the interval start time: $time v.s. $interval_start\n" if($time < $interval_start);
+    if($time < $interval_start) {
+        print "current time is prior to the interval start time: $time v.s. $interval_start\n";
+        $time += (24*60*60);
+    }
+    
 
     print $interval_start."~".($interval_start + $interval).":".$time."\n" if($DEBUG0);
     #####
@@ -103,7 +108,8 @@ while(<FH>) {
     ## the packet belongs to next interval
     else {
         while($time >= $small_interval_start + $small_interval) {
-            push(@small_interval_throughput, $small_interval_sum*8/$small_interval/1000);
+            push(@small_interval_throughput, cal_throughput($small_interval_sum, $small_interval) );
+            # push(@small_interval_throughput, $small_interval_sum*8/$small_interval/1000);
             $small_interval_sum = 0;
             $small_interval_start += $small_interval;
         }
@@ -202,7 +208,12 @@ sub variance{
     return $std;
 }
 
+sub cal_throughput {
+    my ($rcv, $len) = @_;
 
+    # return $rcv * 8 / $len / 1000;
+    return $rcv / $len;
+}
 
 
 
