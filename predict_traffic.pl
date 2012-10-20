@@ -1,5 +1,5 @@
 #####################################
-## Yi-Chao Chen
+## Yi-Chao Chen, Wei Dong
 ## perl predict_traffic.pl tcpdump.campus.walking.tcp.dat.throughput.1.txt THROUGHPUT EWMA 0.1
 ##
 ## input:

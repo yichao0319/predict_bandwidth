@@ -2,7 +2,7 @@
 
 use strict;
 
-my @intervals = (3);
+my @intervals = (1);
 
 foreach my $interval (@intervals) {
     system("perl parse.tcpdump.pl tcpdump.campus.walking.tcp.dat $interval 128.83.144.185 22");
