@@ -4,6 +4,8 @@ use strict;
 
 my $METHOD_EWMA = "EWMA";
 my $METHOD_HW = "HW";
+my $METHOD_LPEWMA = "LPEWMA";
+my $METHOD_GAEWMA = "GAEWMA";
 my $METHOD_ALL = "ALL";
 
 
@@ -23,12 +25,14 @@ my @files = (
     );
 my @intervals = (3);
 
-my @methods = ("EWMA", "HW");
+my @methods = ("EWMA", "HW", "LPEWMA", "GAEWMA");
 my @targets = ("THROUGHPUT", "VARIANCE");
 my @ewma_alpha = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1);
 my @hw_alpha = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1);
 my @hw_beta = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1);
 my @hw_gamma = (0.1);
+my @lpewma_alpha = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1);
+my @gaewma_alpha = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1);
 
 
 open FH, "> batch_predict_traffic.output" or die $!;
@@ -108,6 +112,64 @@ foreach my $file (@files) {
                     print "$interval seconds\t$env\t$method\t$target\t$error\t$throughput\t$best_alpha,$best_beta\n";
                     print FH "$interval seconds\t$env\t$method\t$target\t$error\t$throughput\t$best_alpha,$best_beta\n";
 
+                }
+
+
+                ## LPEWMA
+                if($method eq $METHOD_LPEWMA) {
+                    # print "EWMA:\n";
+
+                    my $min_error;
+                    my $best_alpha = -1;
+                    foreach my $alpha (@lpewma_alpha) {
+                        
+                        my $cmd = "perl predict_traffic.pl $file $target $method $alpha";
+                        my $error = `$cmd` + 0;
+                        # print "$alpha $error\n";
+
+                        if($error < $min_error || $best_alpha == -1) {
+                            $min_error = $error;
+                            $best_alpha = $alpha;
+                        }
+                    }
+                    ## run again the best alpha
+                    my $cmd = "perl predict_traffic.pl $file $target $method $best_alpha";
+                    my $output = `$cmd`;
+                    my ($error, $throughput) = split(/\t/, $output);
+                    $error += 0; $throughput += 0;
+                    # print "----> best: $best_alpha $error\n";
+                    my ($env, $interval, $trace) = parse_name_for_parameters($file);
+                    print "$interval seconds\t$env\t$method\t$target\t";
+                    print "$error\t$throughput\t$best_alpha\n";
+                }
+
+
+                ## GAEWMA
+                if($method eq $METHOD_GAEWMA) {
+                    # print "EWMA:\n";
+
+                    my $min_error;
+                    my $best_alpha = -1;
+                    foreach my $alpha (@gaewma_alpha) {
+                        
+                        my $cmd = "perl predict_traffic.pl $file $target $method $alpha";
+                        my $error = `$cmd` + 0;
+                        # print "$alpha $error\n";
+
+                        if($error < $min_error || $best_alpha == -1) {
+                            $min_error = $error;
+                            $best_alpha = $alpha;
+                        }
+                    }
+                    ## run again the best alpha
+                    my $cmd = "perl predict_traffic.pl $file $target $method $best_alpha";
+                    my $output = `$cmd`;
+                    my ($error, $throughput) = split(/\t/, $output);
+                    $error += 0; $throughput += 0;
+                    # print "----> best: $best_alpha $error\n";
+                    my ($env, $interval, $trace) = parse_name_for_parameters($file);
+                    print "$interval seconds\t$env\t$method\t$target\t";
+                    print "$error\t$throughput\t$best_alpha\n";
                 }
             }
 

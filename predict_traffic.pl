@@ -8,7 +8,7 @@
 ##   target: the target to predict
 ##      [THROUGHPUT | VARIANCE]
 ##   prediction method:
-##      [EWMA | HW | ALL]
+##      [EWMA | HW | LPEWMA | GAEWMA | ALL]
 ##   parameters: parameters for prediction method
 ##
 ## output:
@@ -35,6 +35,8 @@ my $MINUS_INFINITY = -99999;
 
 my $METHOD_EWMA = "EWMA";
 my $METHOD_HW = "HW";
+my $METHOD_LPEWMA = "LPEWMA";
+my $METHOD_GAEWMA = "GAEWMA";
 my $METHOD_ALL = "ALL";
 
 my $PREDICT_THROUGHPUT = "THROUGHPUT";
@@ -75,6 +77,36 @@ my ($a_t_1, $b_t_1) = (0, 0);
 # my @c_t;
 my ($hw_alpha, $hw_beta, $hw_gamma);
 
+## LPEWMA
+my @lpewma;
+my @lpewma_dev;   ## Lili's formula: smooth_dev = (1-beta) smooth_dev + beta * |smooth_load - curr_load |;
+my @lpewma_dev2;  ## s_ewma^2 = (alpha/(2-alpha)) * s^2
+my $lpewma_pred = $MINUS_INFINITY;
+my $lpewma_dev_pred;
+my ($lpewma_alpha);
+my $lpewma_alphamax = 0.2;
+my $lpewma_m = 0;
+my $lpewma_mnorm;
+my $lpewma_last;
+my $lpewma_mnum = 0;
+
+## GAEWMA
+my @gaewma;
+my @gaewma_dev;   ## Lili's formula: smooth_dev = (1-beta) smooth_dev + beta * |smooth_load - curr_load |;
+my @gaewma_dev2;  ## s_ewma^2 = (alpha/(2-alpha)) * s^2
+my $gaewma_pred = $MINUS_INFINITY;
+my $gaewma_dev_pred;
+my ($gaewma_alpha);
+my $gaewma_alphab = 0.2;
+my $gaewma_m = 0;
+my $gaewma_deltam = -1;
+my $gaewma_deltamnorm;
+my $gaewma_last;
+my $gaewma_deltamnum = 0;
+my $gaewma_lastm = -1;
+my $gaewma_x;
+
+
 
 #####
 ## input
@@ -96,6 +128,14 @@ elsif($method eq $METHOD_HW) {
     $hw_alpha = $ARGV[3];
     $hw_beta = $ARGV[4];
     $hw_gamma = $ARGV[5];
+}
+elsif($method eq $METHOD_LPEWMA) {
+    print "use LPEWMA\n" if($DEBUG0);
+    $lpewma_alphamax = $ARGV[3];
+}
+elsif($method eq $METHOD_GAEWMA) {
+    print "use GAEWMA\n" if($DEBUG0);
+    $gaewma_alphab = $ARGV[3];
 }
 elsif($method eq $METHOD_ALL) {
     print "use all methods\n" if($DEBUG0);
@@ -200,6 +240,84 @@ while(<FH>) {
         $b_t_1 = $b_t;
     }
 
+    
+    #####
+    ## lpewma:
+    ##    S_1 = Y_1
+    ##    S_t = alpha * Y_t + (1 - alpha) * S_t-1
+    if($method eq $METHOD_LPEWMA || $method eq $METHOD_ALL) {
+        if($lpewma_pred == $MINUS_INFINITY) {
+            push(@lpewma, 0);                 ## predict the first one as 0
+            push(@lpewma_dev, 0);
+            push(@lpewma_dev2, 0);
+        
+            $lpewma_pred = $target_value;   ## the second prediction is just the first measurement
+            $lpewma_last = $target_value;
+            $lpewma_dev_pred = $target_value / 2;
+        }
+        else {
+            $lpewma_m = $target_value - $lpewma_last;
+            $lpewma_last = $target_value;
+            $lpewma_mnorm = ($lpewma_mnorm*$lpewma_mnum + abs($lpewma_m))/($lpewma_mnum+1);
+            $lpewma_mnum++;
+
+            $lpewma_alpha = $lpewma_alphamax/(1+ abs($lpewma_m)/$lpewma_mnorm);
+            # print "$lpewma_m, $lpewma_mnorm, $lpewma_alpha\n";
+            $lpewma_dev_pred = $lpewma_alpha * abs($target_value - $lpewma_pred) + (1 - $lpewma_alpha) * $lpewma_dev_pred;
+            $lpewma_pred = $lpewma_alpha * $target_value + (1 - $lpewma_alpha) * $lpewma_pred;
+        }
+        push(@lpewma, $lpewma_pred);
+        push(@lpewma_dev, $lpewma_dev_pred);
+        ## variance: s_ewma^2 = (alpha/(2-alpha)) * s^2
+        push(@lpewma_dev2, sqrt($lpewma_alpha/(2-$lpewma_alpha) * variance(\@raw) ) );
+    }    
+
+
+    #####
+    ## gaewma:
+    ##    S_1 = Y_1
+    ##    S_t = alpha * Y_t + (1 - alpha) * S_t-1
+    if($method eq $METHOD_GAEWMA || $method eq $METHOD_ALL) {
+        if($gaewma_pred == $MINUS_INFINITY) {
+            push(@gaewma, 0);                 ## predict the first one as 0
+            push(@gaewma_dev, 0);
+            push(@gaewma_dev2, 0);
+
+            $gaewma_pred = $target_value;   ## the second prediction is just the first measurement
+            $gaewma_last = $target_value;
+            $gaewma_dev_pred = $target_value / 2;
+        }
+        else {
+            $gaewma_m = $target_value - $gaewma_last;
+
+            $gaewma_deltam = $gaewma_m  - $gaewma_lastm if($gaewma_lastm!=-1); 
+            $gaewma_lastm = $gaewma_m;
+
+            $gaewma_last = $target_value;
+            $gaewma_deltamnorm = ($gaewma_deltamnorm*$gaewma_deltamnum + abs($gaewma_deltam))/($gaewma_deltamnum+1) if($gaewma_deltam != -1);
+            $gaewma_deltamnum++ if($gaewma_deltam != -1) ;
+            if($gaewma_deltam == 0 || $gaewma_deltamnum == 0)
+            {
+                $gaewma_x = 1;
+            }
+            else
+            {
+                $gaewma_x = abs($gaewma_deltam)/$gaewma_deltamnorm;
+            }
+    
+            $gaewma_alpha = $gaewma_alphab**$gaewma_x;
+            # print "$gaewma_deltam, $gaewma_deltamnorm, $gaewma_alpha\n";        
+            $gaewma_dev_pred = $gaewma_alpha * abs($target_value - $gaewma_pred) + (1 - $gaewma_alpha) * $gaewma_dev_pred;
+            $gaewma_pred = $gaewma_alpha * $target_value + (1 - $gaewma_alpha) * $gaewma_pred;
+        }
+        push(@gaewma, $gaewma_pred);
+        push(@gaewma_dev, $gaewma_dev_pred);
+        ## variance: s_ewma^2 = (alpha/(2-alpha)) * s^2
+        push(@gaewma_dev2, sqrt($gaewma_alpha/(2-$gaewma_alpha) * variance(\@raw) ) );
+    }
+
+
+
 }
 close FH;
 
@@ -240,6 +358,34 @@ if($method eq $METHOD_HW || $method eq $METHOD_ALL) {
     close FH_HW;
 }
 
+## LPEWMA
+if($method eq $METHOD_LPEWMA || $method eq $METHOD_ALL) {
+    pop(@lpewma); ## remove the last prediction
+    die "wrong number of ewma prediction" if($#lpewma != $#raw);
+    print "length of array: ".scalar(@raw)."\n" if($DEBUG0);
+
+    open FH_LPEWMA, "> $output_dir/$file.$target.LPEWMA.txt" or die $!;
+    for(my $i = 0; $i < scalar(@lpewma); $i ++) {
+        print FH_LPEWMA $time[$i]." ".$lpewma[$i]." ".$lpewma_dev[$i]." ".$lpewma_dev2[$i]."\n";
+    }
+    close FH_LPEWMA;
+}
+
+## GAEWMA
+if($method eq $METHOD_GAEWMA || $method eq $METHOD_ALL) {
+    pop(@gaewma); ## remove the last prediction
+    die "wrong number of ewma prediction" if($#gaewma != $#raw);
+    print "length of array: ".scalar(@raw)."\n" if($DEBUG0);
+
+    open FH_GAEWMA, "> $output_dir/$file.$target.GAEWMA.txt" or die $!;
+    for(my $i = 0; $i < scalar(@gaewma); $i ++) {
+        print FH_GAEWMA $time[$i]." ".$gaewma[$i]." ".$gaewma_dev[$i]." ".$gaewma_dev2[$i]."\n";
+    }
+    close FH_GAEWMA;
+}
+
+
+
 ##  ii) print prediction error
 ## EWMA
 if($method eq $METHOD_EWMA || $method eq $METHOD_ALL) {
@@ -276,6 +422,45 @@ if($method eq $METHOD_HW || $method eq $METHOD_ALL) {
     print "Holt-Winters avg err = " if($DEBUG0);
     # print "$hw_avg_err\t$total_throughput\n";
     print "$hw_avg_err\t".($target_sum/$target_ind)."\n";
+}
+
+## LPEWMA
+if($method eq $METHOD_LPEWMA || $method eq $METHOD_ALL) {
+    open FH_LPEWMA, "> $output_dir/$file.$target.lpewma.err.txt" or die $!;
+    print FH_LPEWMA $time[0]." 0\n";
+    my $sum = 0.0;
+    ## ignore the first prediction
+    for(my $i = 1; $i < scalar(@raw); $i ++) {
+        my $error = abs($raw[$i] - $lpewma[$i]);
+        $sum += $error;
+        print FH_LPEWMA $time[$i]." $error\n";
+    }
+    my $lpewma_avg_err = $sum / (scalar(@raw) - 1);
+    close FH_LPEWMA;
+
+    print "LPEWMA avg err = " if($DEBUG0);
+    # print "$ewma_avg_err\t$total_throughput\n";
+    print "$lpewma_avg_err\t".($target_sum/$target_ind)."\n";
+}
+
+
+## GAEWMA
+if($method eq $METHOD_GAEWMA || $method eq $METHOD_ALL) {
+    open FH_GAEWMA, "> $output_dir/$file.$target.gaewma.err.txt" or die $!;
+    print FH_GAEWMA $time[0]." 0\n";
+    my $sum = 0.0;
+    ## ignore the first prediction
+    for(my $i = 1; $i < scalar(@raw); $i ++) {
+        my $error = abs($raw[$i] - $gaewma[$i]);
+        $sum += $error;
+        print FH_GAEWMA $time[$i]." $error\n";
+    }
+    my $gaewma_avg_err = $sum / (scalar(@raw) - 1);
+    close FH_GAEWMA;
+
+    print "GAEWMA avg err = " if($DEBUG0);
+    # print "$ewma_avg_err\t$total_throughput\n";
+    print "$gaewma_avg_err\t".($target_sum/$target_ind)."\n";
 }
 
 
