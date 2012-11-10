@@ -26,13 +26,16 @@ my $DEBUG = 1;
 #####
 ## global variables
 my $raw_dir = "./RAWDATA";
+# my $raw_dir = "/v/filer4b/v27q002/ut-wireless/wdong/traffic_prediction/RAWDATA/cdma2000";
 # my $raw_dir = "/var/local/yichao/mobile_streaming/RAWDATA";
 my $output_dir = "./PARSEDDATA";
 my $file;
 my $output_file;
-my $server = "128.83.120.56";
+# my $server = "128.83.120.56";
 # my $server = "128.83.144.185";
-my $server_port = 22;
+my $server = "61.252.48.57";
+# my $server_port = 22;
+my $server_port = 5001;
 my $interval;
 my $interval_start = -1;
 my $interval_sum = 0;
@@ -75,8 +78,12 @@ while(<FH>) {
         ($hour, $min, $sec, $src_ip, $src_port, $dst_ip, $dst_port, $pkt_len) = 
             ($1+0, $2+0, $3+0.0, $4, $5+0, $6, $7+0, $8+0);
 
+
+        #####
         ## only use server -> client to calculate throughput
-        next if($src_ip ne $server || $src_port ne $server_port);
+        ##   2012.11.09: depends on we're checking server or receiver
+        next if($src_ip ne $server || $src_port ne $server_port); 
+        # next if($dst_ip ne $server || $dst_port ne $server_port);
 
         ## quick process
         $time = ($hour * 60 + $min) * 60 + $sec;
@@ -94,8 +101,8 @@ while(<FH>) {
     ## calculate throuphput per interval
     $interval_start = int($time) if($interval_start == -1);
     $small_interval_start = int($time) if($small_interval_start == -1);
-    if($time < $interval_start) {
-        print "current time is prior to the interval start time: $time v.s. $interval_start\n";
+    while($time < $interval_start) {
+        # print "current time is prior to the interval start time: $time v.s. $interval_start\n";
         $time += (24*60*60);
     }
     

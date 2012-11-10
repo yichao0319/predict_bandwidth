@@ -200,7 +200,7 @@ sub get_timeseries {
             $complete_trace = 0;
             last;
         }
-        
+
 
         #####
         ## determine the prediction target
@@ -214,7 +214,7 @@ sub get_timeseries {
         else {
             die "wrong target name\n";
         }
-        
+
 
         #####
         ## get target value for desired interval
