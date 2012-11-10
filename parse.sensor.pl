@@ -15,6 +15,8 @@
 
 use strict;
 
+require "./utils.pl";
+
 
 my $DEBUG0 = 0;
 my $DEBUG = 1;
@@ -145,64 +147,5 @@ close FH_OUT;
 ## plot figures
 system("sed 's/filename = XXX/filename = \"$output_file\"/' plot_sensor.mother.plot > plot_sensor.plot");
 system("gnuplot plot_sensor.plot");
-
-
-
-#####
-## functions
-
-sub mean {
-    my($data) = @_;
-    
-    if (not @$data) {
-        return 0;
-    }
-    my $total = 0;
-    foreach (@$data) {
-        $total += $_;
-    }
-    my $average = $total / @$data;
-    return $average;
-}
-
-sub stdev{
-    my($data) = @_;
-    
-    if(@$data <= 1){
-        return 0;
-    }
-    
-    my $average = &mean($data);
-    my $sqtotal = 0;
-    foreach(@$data) {
-        $sqtotal += ($average-$_) ** 2;
-    }
-    my $std = ($sqtotal / (@$data - 1)) ** 0.5;
-    return $std;
-}
-
-sub variance{
-    my($data) = @_;
-    
-    if(@$data <= 1){
-        return 0;
-    }
-    
-    my $average = &mean($data);
-    my $sqtotal = 0;
-    foreach(@$data) {
-        $sqtotal += (($average-$_) ** 2);
-    }
-    my $std = $sqtotal / (@$data - 1);
-    return $std;
-}
-
-
-
-
-
-
-
-
 
 

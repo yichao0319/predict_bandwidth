@@ -6,6 +6,7 @@ The program includes the following parts:
 3. output:    generate the output with format specified by Yousuk
 4. sensor parser: parse the sensor data from "xSensor"
 5. advance predictor: try to use sensor data to predict performance
+6. predictor2: use EWMA/Holt-Winters to predict traffic in N intervals
 
 
 ##########
@@ -140,5 +141,15 @@ perl batch_parse.sensor.pl
 ## 5. predict with the help of sensor data
 corr_sensor_performance.m
 
+
+##########
+## 6. predictor2: use EWMA/Holt-Winters to predict traffic in N intervals
+predict_traffic_win.pl
+
+e.g. 
+perl predict_traffic_win.pl tcpdump.campus.walking.tcp.dat.throughput.1.txt THROUGHPUT 3 5 EWMA 0.1
+
+or use batch script
+perl batch_predict_traffic_win.pl
 
 
