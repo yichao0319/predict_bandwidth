@@ -152,6 +152,15 @@ corr_sensor_performance.m
 ## 6. predictor2: use EWMA/Holt-Winters to predict traffic in N intervals
 predict_traffic_win.pl
 
+
+/v/filer4b/v27q002/ut-wireless/yichao/mobile_streaming/traffic_prediction/PARSEDATA2/
+
+The time interval is set to 1 second. In each time slot, EWMA is used to predicted the current and the following 1~10-second bandwidth. The RTTVAR-like error estimation is calculated using the formula:
+var = (1-beta) * var + beta * |predicted_bandwidth - actual_bandwidth|;
+
+The file format is:
+<time> <actual bw> <prediction of current time slot> <var of current time slot> <prediction of time slot 1> <var of time slot 1> <prediction of time slot 2> <var of time slot 2> <prediction of time slot 3> <var of time slot 3> ...
+
 e.g. 
 perl predict_traffic_win.pl tcpdump.campus.walking.tcp.dat.throughput.1.txt THROUGHPUT 3 5 EWMA 0.1
 
