@@ -45,10 +45,11 @@ my $PREDICT_THROUGHPUT_VARIANCE = "VARIANCE";
 
 #####
 ## global variables
-# my $file_path = "/v/filer4b/v27q002/ut-wireless/wdong/mobile_trace/";
-my $file_path = "./PARSEDDATA";
+# my $file_path = "/v/filer4b/v27q002/ut-wireless/wdong/mobile_trace";
+my $file_path = "/v/filer4b/v27q002/ut-wireless/wdong/traffic_prediction/PARSEDDATA";
+# my $file_path = "./PARSEDDATA";
 my $file;
-my $output_dir = "./PARSEDDATA_tmp";
+my $output_dir = "./PARSEDDATA2";
 my $output_file;
 my $method; ## prediction method: EWMA, HW, ..
 my $target; ## prediction target: mean throughput, variance throughput, ...
@@ -111,7 +112,7 @@ $output_file = "$file.muti-win.$target.$method.$interval.$win_size.out";
 
 #####
 ## main
-my $sim_time = 300;
+my $sim_time = 999999;
 my $err_sum = 0;
 my $err_cnt = 0;
 
@@ -183,7 +184,7 @@ sub get_timeseries {
     my @timeseries = ();
     my $complete_trace = 1;
 
-    open FH, "< $filename" or die $!;
+    open FH, "< $filename" or die $!." \n$filename\n";
     while(<FH>) {
         my ($time, $rev_data, $throughput_mean, $throughput_variance) = split(/[ \n]/, $_);
         

@@ -11,24 +11,51 @@ my $METHOD_ALL = "ALL";
 
 
 my @files = (
-    "tcpdump.campus.walking.tcp.dat.throughput.", 
-    "tcpdump.home.shuttle.tcp.dat.throughput.",
-    "tcpdump.home.static.tcp.dat.throughput.",
-    "tcpdump.home.walking.tcp.dat.throughput.",
-    "tcpdump.home.walking2.tcp.dat.throughput.",
-    "tcpdump.office.static.tcp.dat.throughput.",
-    "tcpdump.office.static.midnight.tcp.dat.throughput.", 
-    "tcpdump.driving.highway.midnight.tcp.dat.throughput.",
-    "tcpdump.driving.midnight1.tcp.dat.throughput.",
-    "tcpdump.driving.midnight2.tcp.dat.throughput.",
-    "tcpdump.driving.midnight3.tcp.dat.throughput.",
+    # "tcpdump.campus.walking.tcp.dat.throughput.", 
+    # "tcpdump.home.shuttle.tcp.dat.throughput.",
+    # "tcpdump.home.static.tcp.dat.throughput.",
+    # "tcpdump.home.walking.tcp.dat.throughput.",
+    # "tcpdump.home.walking2.tcp.dat.throughput.",
+    # "tcpdump.office.static.tcp.dat.throughput.",
+    # "tcpdump.office.static.midnight.tcp.dat.throughput.", 
+    # "tcpdump.driving.highway.midnight.tcp.dat.throughput.",
+    # "tcpdump.driving.midnight1.tcp.dat.throughput.",
+    # "tcpdump.driving.midnight2.tcp.dat.throughput.",
+    # "tcpdump.driving.midnight3.tcp.dat.throughput.",
+
+    ## wei's trace
+    "05mph-day4.server.ap.tcpbulk.20050325-231708.tcpdump.throughput.",
+    "05mph-day4.server.ap.tcpbulk.20050325-232445.tcpdump.throughput.",
+    "15mph-day4.client.ap.tcpbulk.20050325-222242.tcpdump.throughput.",
+    "15mph-day4.client.ap.tcpbulk.20050325-222612.tcpdump.throughput.",
+    "15mph-day4.server.ap.tcpbulk.20050325-222256.tcpdump.throughput.",
+    "15mph-day4.server.ap.tcpbulk.20050325-222630.tcpdump.throughput.",
+    "20050817-receiver-all.dump.throughput.",
+    "20050820-receiver-all.dump.throughput.",
+    "20050907-downlink-receiver.dump.throughput.",
+    "25mph-day4.client.ap.tcpbulk.20050325-211758.tcpdump.throughput.",
+    "25mph-day4.server.ap.tcpbulk.20050325-211736.tcpdump.throughput.",
+    "25mph-day4.server.ap.tcpbulk.20050325-212043.tcpdump.throughput.",
+    "35mph-day4.client.ap.tcpbulk.20050325-214332.tcpdump.throughput.",
+    "35mph-day4.server.ap.tcpbulk.20050325-214355.tcpdump.throughput.",
+    "55mph-day4.client.ap.tcpbulk.20050325-224437.tcpdump.throughput.",
+    "55mph-day4.server.ap.tcpbulk.20050325-224207.tcpdump.throughput.",
+    "55mph-day4.server.ap.tcpbulk.20050325-224506.tcpdump.throughput.",
+    "75mph-day4.client.ap.tcpbulk.20050325-234915.tcpdump.throughput.",
+    "75mph-day4.server.ap.tcpbulk.20050325-234726.tcpdump.throughput.",
+    "kw_seoul_st_udp_cbr_5000~6000kbps_iperf_dn_11x300sec_cl_20071012.pcap.throughput.",
+    "kw_seoul_st_udp_cbr_5000~6000kbps_iperf_dn_11x300sec_sv_20071012.pcap.throughput.",
+    "kw_seoul_st_udp_cbr_5500kbps_iperf_dn_20x120sec_cl_20071005.pcap.throughput.",
+    "kw_seoul_st_udp_cbr_5500kbps_iperf_dn_20x120sec_sv_20071005.pcap.throughput.",
+
     );
 my @intervals = (1);
 my $win_size = 10;
 
 my @methods = ("EWMA"); #, "HW", "LPEWMA", "GAEWMA");
 my @targets = ("THROUGHPUT"); #, "VARIANCE");
-my @ewma_alpha = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1);
+# my @ewma_alpha = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1);
+my @ewma_alpha = (0, 0.1, 0.5, 0.9, 1);
 my @hw_alpha = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1);
 my @hw_beta = (0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1);
 my @hw_gamma = (0.1);
@@ -71,7 +98,11 @@ foreach my $file (@files) {
                     my ($error) = split(/\t/, $output); 
                     $error += 0;
                     # print "----> best: $best_alpha $error\n";
-                    my ($env, $tmp, $trace) = parse_name_for_parameters($file);
+
+                    ## remove the following line for Wei's trace
+                    # my ($env, $tmp, $trace) = parse_name_for_parameters($file);
+                    ## and replace it with the following line
+                    my ($env, $tmp, $trace) = ("wei", 1, 1);
                     print "$interval seconds\t$env\t$method\t$target\t";
                     print "$error\t$best_alpha\n";
                 }

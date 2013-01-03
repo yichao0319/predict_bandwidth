@@ -165,6 +165,9 @@ e.g.
 perl predict_traffic_win.pl tcpdump.campus.walking.tcp.dat.throughput.1.txt THROUGHPUT 3 5 EWMA 0.1
 
 or use batch script
-perl batch_predict_traffic_win.pl
+  perl batch_predict_traffic_win.pl
 
+or use condor
+  batch_predict_traffic_win.mother.condor
 
+  
