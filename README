@@ -151,7 +151,7 @@ corr_sensor_performance.m
 ##########
 ## 6. predictor2: use EWMA/Holt-Winters to predict traffic in N intervals
 predict_traffic_win.pl
-
+(predict_traffic_win_gen_dummy.pl will generate dummy trace given mean and variance tput)
 
 /v/filer4b/v27q002/ut-wireless/yichao/mobile_streaming/traffic_prediction/PARSEDATA2/
 

@@ -1,0 +1,8 @@
+
+#####
+## generated output
+plot_prediction.plot
+plot_sensor.plot
+plot_wei_trace.plot
+*.output
+tmp*

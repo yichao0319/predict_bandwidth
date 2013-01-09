@@ -1,0 +1,17 @@
++Group = "GRAD" 
++Project = "NETWORKING_MULTIMEDIA" 
++ProjectDescription = "process traffic and generate output file in specific format"
+
+Universe = vanilla
+
+executable = /lusr/bin/perl 
+arguments = tmp_1_batch_predict_traffic_win.pl
+Requirements = Memory >= 64
+Rank = Memory >= 128
+
+
+Error = OUTPUT/err1.txt
+Output = OUTPUT/out1.txt
+Log = OUTPUT/log1.txt
+
+Queue 1
